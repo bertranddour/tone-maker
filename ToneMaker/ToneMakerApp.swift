@@ -1,23 +1,29 @@
-//
-//  ToneMakerApp.swift
-//  ToneMaker
-//
-//  Created by Bertrand Dour on 15/04/2026.
-//
-
 import SwiftUI
 import SwiftData
 
 @main
 struct ToneMakerApp: App {
+
+    @State private var trainingEngine = TrainingEngine()
+
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            TrainingSession.self,
+            ModelMetadata.self,
+            TrainingPreset.self,
+            PersistedAudioFile.self,
+            CaptureItem.self,
         ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+        let modelConfiguration = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: false
+        )
 
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            return try ModelContainer(
+                for: schema,
+                configurations: [modelConfiguration]
+            )
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }
@@ -26,7 +32,18 @@ struct ToneMakerApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .frame(minWidth: 1100, minHeight: 700)
+                .environment(trainingEngine)
         }
         .modelContainer(sharedModelContainer)
+        .windowToolbarStyle(.unified)
+        .defaultSize(width: 1280, height: 800)
+
+        #if os(macOS)
+        Settings {
+            SettingsView()
+        }
+        .defaultSize(width: 500, height: 400)
+        #endif
     }
 }

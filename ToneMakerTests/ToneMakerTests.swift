@@ -1,19 +1,5 @@
-//
-//  ToneMakerTests.swift
-//  ToneMakerTests
-//
-//  Created by Bertrand Dour on 15/04/2026.
-//
-
 import Testing
 @testable import ToneMaker
 
-struct ToneMakerTests {
-
-    @Test func example() async throws {
-        // Write your test here and use APIs like `#expect(...)` to check expected conditions.
-        // Swift Testing Documentation
-        // https://developer.apple.com/documentation/testing
-    }
-
-}
+// This file intentionally left as the test suite entry point.
+// Tests are organized in subdirectories: Models/, Utilities/, Services/
