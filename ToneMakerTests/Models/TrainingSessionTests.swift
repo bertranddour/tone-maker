@@ -25,7 +25,6 @@ struct TrainingSessionTests {
         #expect(session.batchSize == 16)
         #expect(session.ny == 8192)
         #expect(session.seed == 0)
-        #expect(session.silentMode == false)
         #expect(session.savePlot == true)
         #expect(session.fitMRSTFT == true)
         #expect(session.ignoreChecks == false)

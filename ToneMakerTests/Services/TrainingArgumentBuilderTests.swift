@@ -52,7 +52,7 @@ struct TrainingArgumentBuilderTests {
         #expect(args["lr_decay"] as? Double == 0.007)
         #expect(args["seed"] as? Int == 0)
         #expect(args["save_plot"] as? Bool == true)
-        #expect(args["silent"] as? Bool == false)
+        #expect(args["silent"] as? Bool == true)
         #expect(args["modelname"] as? String == "reamped")
         #expect(args["ignore_checks"] as? Bool == false)
         #expect(args["fit_mrstft"] as? Bool == true)

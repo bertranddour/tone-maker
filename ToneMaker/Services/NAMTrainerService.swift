@@ -1,4 +1,7 @@
 import Foundation
+import os.log
+
+private nonisolated let logger = Logger(subsystem: "boutique.bluewaves.ToneMaker", category: "NAMTrainerService")
 
 /// Protocol for the training service, enabling test mocking.
 protocol TrainingServiceProtocol: Sendable {
@@ -124,6 +127,7 @@ actor NAMTrainerService: TrainingServiceProtocol {
     /// (set via Settings > General > NAM-Trainer Project).
     func detectEnvironment() async -> PythonEnvironment? {
         if let existing = environment { return existing }
+        logger.info("Detecting Python environment")
 
         let userPath = UserDefaults.standard.string(forKey: "namTrainerProjectPath")
         let projectURL: URL
@@ -134,6 +138,11 @@ actor NAMTrainerService: TrainingServiceProtocol {
         }
 
         let detected = await PythonEnvironmentDetector.detect(namTrainerPath: projectURL)
+        if let detected {
+            logger.info("Python environment found: \(detected.pythonPath.path)")
+        } else {
+            logger.error("Python environment not found")
+        }
         environment = detected
         return detected
     }

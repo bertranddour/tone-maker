@@ -1,4 +1,7 @@
 import Foundation
+import os.log
+
+private nonisolated let logger = Logger(subsystem: "boutique.bluewaves.ToneMaker", category: "ProcessRunner")
 
 /// Output from a running subprocess.
 nonisolated enum ProcessOutput: Sendable {
@@ -52,6 +55,8 @@ actor ProcessRunner {
         guard process == nil || process?.isRunning == false else {
             throw ProcessRunnerError.alreadyRunning
         }
+
+        logger.debug("Launching: \(executableURL.lastPathComponent)")
 
         let proc = Process()
         proc.executableURL = executableURL

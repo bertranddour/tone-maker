@@ -24,7 +24,7 @@ Read [CLAUDE.md](CLAUDE.md) for the full coding guidelines. The key points:
 
 Every PR must:
 - Build with **zero warnings** and zero errors
-- Pass all **129+ tests**
+- Pass **all tests**
 - Follow the existing SwiftUI/SwiftData patterns
 - Use Apple official documentation as the source of truth
 

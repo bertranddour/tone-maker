@@ -1,5 +1,8 @@
 import Foundation
 import SwiftData
+import os.log
+
+private nonisolated let logger = Logger(subsystem: "boutique.bluewaves.ToneMaker", category: "TrainingEngine")
 
 /// Manages active training sessions, bridging `NAMTrainerService` to the UI.
 ///
@@ -40,7 +43,11 @@ final class TrainingEngine {
     /// Resolves file bookmarks, then runs training for each output file (batch support).
     /// Updates the session's status and results in the model context.
     func startTraining(session: TrainingSession, modelContext: ModelContext) {
-        guard !isTraining else { return }
+        guard !isTraining else {
+            logger.warning("Training already in progress, ignoring start request")
+            return
+        }
+        logger.info("Starting training for session: \(session.displayName)")
 
         activeSessionID = session.id
         logOutput = ""
@@ -57,6 +64,7 @@ final class TrainingEngine {
 
     /// Cancels the currently running training.
     func cancelTraining(session: TrainingSession) {
+        logger.info("Cancelling training for session: \(session.displayName)")
         trainingTask?.cancel()
         trainingTask = nil
 
@@ -159,6 +167,7 @@ final class TrainingEngine {
         session.completedAt = Date()
 
         if Task.isCancelled {
+            logger.info("Training cancelled")
             session.status = .cancelled
         } else if allSucceeded && session.validationESR != nil {
             // Import .nam files from temp directory into library
@@ -187,10 +196,13 @@ final class TrainingEngine {
                     }
                     capture.sourceSession = session
                     modelContext.insert(capture)
+                    logger.info("Imported capture: \(namURL.lastPathComponent)")
                 }
             }
+            logger.info("Training completed with ESR \(session.validationESR ?? 0), imported \(namFiles.count) capture(s)")
             session.status = .completed
         } else {
+            logger.error("Training failed (succeeded=\(allSucceeded), ESR=\(session.validationESR.map { String($0) } ?? "nil"))")
             session.status = .failed
         }
 

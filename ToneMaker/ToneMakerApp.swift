@@ -43,7 +43,7 @@ struct ToneMakerApp: App {
         Settings {
             SettingsView()
         }
-        .defaultSize(width: 500, height: 400)
+        .defaultSize(width: 520, height: 480)
         #endif
     }
 }

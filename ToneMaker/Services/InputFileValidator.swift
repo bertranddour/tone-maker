@@ -1,4 +1,7 @@
 import Foundation
+import os.log
+
+private nonisolated let logger = Logger(subsystem: "boutique.bluewaves.ToneMaker", category: "InputFileValidator")
 
 /// Result of client-side input file validation.
 nonisolated struct InputValidationResult: Sendable {
@@ -16,6 +19,7 @@ nonisolated struct InputFileValidator: Sendable {
 
     /// Validates a single WAV file for use as NAM training input.
     static func validateInput(at url: URL) -> InputValidationResult {
+        logger.debug("Validating input: \(url.lastPathComponent)")
         do {
             let info = try WAVHeaderReader.read(from: url)
             var errors: [String] = []

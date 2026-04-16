@@ -32,7 +32,7 @@ ToneMaker replaces the Python/Tkinter NAM Trainer GUI with a production-grade Ma
 - **CloudKit sync** via SwiftData with `@Attribute(.externalStorage)` for audio and model files
 - **Security-scoped bookmarks** with persisted audio fallback for session recovery
 - **Zero external dependencies** -- uses only Apple frameworks
-- **129 tests** across models, services, and utilities using Swift Testing
+- **Comprehensive test suite** across models, services, and utilities using Swift Testing
 
 ## Requirements
 

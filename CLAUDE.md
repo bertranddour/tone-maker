@@ -18,7 +18,7 @@ mcp__xcode__DocumentationSearch(query: "NavigationSplitView sidebar selection", 
 
 - **Zero warnings.** Every build must produce zero compiler warnings. No suppressions, no `@available` workarounds for things that should just be fixed.
 - **Zero errors.** Obviously.
-- **All tests pass.** Run `mcp__xcode__RunAllTests` after every change. Currently 129 tests.
+- **All tests pass.** Run `mcp__xcode__RunAllTests` after every change.
 - **No regressions.** Don't break existing features when adding new ones.
 
 ### Build Verification

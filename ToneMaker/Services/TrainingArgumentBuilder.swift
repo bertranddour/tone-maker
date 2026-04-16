@@ -42,7 +42,7 @@ nonisolated struct TrainingArgumentBuilder: Sendable {
             "lr_decay": session.learningRateDecay,
             "seed": session.seed,
             "save_plot": session.savePlot,
-            "silent": session.silentMode,
+            "silent": true,
             "modelname": modelName,
             "ignore_checks": session.ignoreChecks,
             "fit_mrstft": session.fitMRSTFT,

@@ -4,34 +4,35 @@ import SwiftUI
 struct SettingsView: View {
     var body: some View {
         TabView {
-            Tab("General", systemImage: "gear") {
-                GeneralSettingsView()
+            Tab("Environment", systemImage: "terminal") {
+                EnvironmentSettingsView()
             }
-            Tab("Training", systemImage: "brain") {
-                TrainingDefaultsSettingsView()
+            Tab("Profile", systemImage: "person.circle") {
+                ProfileSettingsView()
+            }
+            Tab("Training", systemImage: "cube.transparent") {
+                TrainingSettingsView()
             }
         }
         .scenePadding()
-        .frame(minWidth: 450, minHeight: 300)
+        .frame(minWidth: 480, minHeight: 280)
     }
 }
 
-// MARK: - General Settings
+// MARK: - Environment
 
-struct GeneralSettingsView: View {
+/// Python/NAM setup and hardware detection.
+struct EnvironmentSettingsView: View {
     @AppStorage("pythonEnvironmentPath") private var pythonEnvironmentPath = ""
     @AppStorage("namTrainerProjectPath") private var namTrainerProjectPath = ""
-    @AppStorage("defaultModeledBy") private var defaultModeledBy = ""
-    @AppStorage("defaultInputLevelDBu") private var defaultInputLevelDBu: Double = 0.0
-    @AppStorage("defaultOutputLevelDBu") private var defaultOutputLevelDBu: Double = 0.0
 
     @State private var environmentStatus: String?
     @State private var isDetecting = false
 
     var body: some View {
         Form {
-            Section("Python Environment") {
-                LabeledContent("NAM-Trainer Project") {
+            Section("NAM-Trainer") {
+                LabeledContent("Project Path") {
                     HStack {
                         TextField("Path", text: $namTrainerProjectPath)
                             .frame(minWidth: 250)
@@ -41,7 +42,7 @@ struct GeneralSettingsView: View {
                     }
                 }
 
-                LabeledContent("Python/uv Path") {
+                LabeledContent("Python") {
                     HStack {
                         TextField("Auto-detect", text: $pythonEnvironmentPath)
                             .frame(minWidth: 250)
@@ -64,21 +65,17 @@ struct GeneralSettingsView: View {
                 }
             }
 
-            Section("Metadata Defaults") {
-                TextField("Modeled By", text: $defaultModeledBy, prompt: Text("Your name"))
-            }
-
-            Section("Calibration") {
-                LabeledContent("Reamp Send Level (dBu)") {
-                    TextField("dBu", value: $defaultInputLevelDBu, format: .number.precision(.fractionLength(1)))
-                        .frame(width: 80)
-                        .multilineTextAlignment(.trailing)
+            Section {
+                LabeledContent("GPU Accelerator") {
+                    Text(Defaults.hasAccelerator ? "Available (MPS)" : "Not available (CPU only)")
+                        .foregroundStyle(Defaults.hasAccelerator ? .green : .orange)
                 }
-                LabeledContent("Reamp Return Level (dBu)") {
-                    TextField("dBu", value: $defaultOutputLevelDBu, format: .number.precision(.fractionLength(1)))
-                        .frame(width: 80)
-                        .multilineTextAlignment(.trailing)
-                }
+            } header: {
+                Text("Hardware")
+            } footer: {
+                Text("Batch size and learning rate decay are adjusted automatically based on GPU availability.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
@@ -101,42 +98,76 @@ struct GeneralSettingsView: View {
         environmentStatus = nil
 
         Task {
-            let projectURL = namTrainerProjectPath.isEmpty ? nil : URL(fileURLWithPath: namTrainerProjectPath)
-            let env = await PythonEnvironmentDetector.detect(
-                namTrainerPath: projectURL ?? PythonEnvironmentDetector.defaultNAMTrainerPath
-            )
+            let projectURL = namTrainerProjectPath.isEmpty
+                ? PythonEnvironmentDetector.defaultNAMTrainerPath
+                : URL(fileURLWithPath: namTrainerProjectPath)
+
+            let env = await PythonEnvironmentDetector.detect(namTrainerPath: projectURL)
 
             if let env {
                 let valid = await PythonEnvironmentDetector.validate(env)
-                await MainActor.run {
-                    if valid {
-                        environmentStatus = "Found: \(env.pythonPath.path) (validated)"
-                        pythonEnvironmentPath = env.pythonPath.path
-                    } else {
-                        environmentStatus = "Found but validation failed"
-                    }
-                    isDetecting = false
+                if valid {
+                    environmentStatus = "Found: \(env.pythonPath.path) (validated)"
+                    pythonEnvironmentPath = env.pythonPath.path
+                } else {
+                    environmentStatus = "Found but validation failed"
                 }
             } else {
-                await MainActor.run {
-                    environmentStatus = "Not found. Install uv and NAM, or set path manually."
-                    isDetecting = false
-                }
+                environmentStatus = "Not found. Install NAM-Trainer with a .venv, or set path manually."
             }
+            isDetecting = false
         }
     }
 }
 
-// MARK: - Training Defaults Settings
+// MARK: - Profile
 
-struct TrainingDefaultsSettingsView: View {
+/// Identity and rig calibration -- metadata embedded in every capture.
+struct ProfileSettingsView: View {
+    @AppStorage("defaultModeledBy") private var defaultModeledBy = ""
+    @AppStorage("defaultInputLevelDBu") private var defaultInputLevelDBu: Double = 0.0
+    @AppStorage("defaultOutputLevelDBu") private var defaultOutputLevelDBu: Double = 0.0
+
+    var body: some View {
+        Form {
+            Section("Identity") {
+                TextField("Modeled By", text: $defaultModeledBy, prompt: Text("Your name"))
+            }
+
+            Section {
+                LabeledContent("Reamp Send Level (dBu)") {
+                    TextField("dBu", value: $defaultInputLevelDBu, format: .number.precision(.fractionLength(1)))
+                        .frame(width: 80)
+                        .multilineTextAlignment(.trailing)
+                }
+                LabeledContent("Reamp Return Level (dBu)") {
+                    TextField("dBu", value: $defaultOutputLevelDBu, format: .number.precision(.fractionLength(1)))
+                        .frame(width: 80)
+                        .multilineTextAlignment(.trailing)
+                }
+            } header: {
+                Text("Calibration")
+            } footer: {
+                Text("These values are embedded in capture metadata for accurate level matching.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+// MARK: - Training
+
+/// Default parameters for new training sessions.
+struct TrainingSettingsView: View {
     @AppStorage("defaultEpochs") private var defaultEpochs = Defaults.epochs
     @AppStorage("defaultArchitecture") private var defaultArchitecture = ModelArchitecture.waveNet.rawValue
     @AppStorage("defaultArchitectureSize") private var defaultArchitectureSize = ArchitectureSize.standard.rawValue
 
     var body: some View {
         Form {
-            Section("Default Training Parameters") {
+            Section("Defaults for New Sessions") {
                 Picker("Epochs", selection: $defaultEpochs) {
                     ForEach([100, 200, 400, 800, 1000], id: \.self) { value in
                         Text("\(value)").tag(value)
@@ -154,19 +185,6 @@ struct TrainingDefaultsSettingsView: View {
                         Text(size.displayName).tag(size.rawValue)
                     }
                 }
-            }
-
-            Section {
-                LabeledContent("GPU Accelerator") {
-                    Text(Defaults.hasAccelerator ? "Available (MPS)" : "Not available (CPU only)")
-                        .foregroundStyle(Defaults.hasAccelerator ? .green : .orange)
-                }
-            } header: {
-                Text("Hardware")
-            } footer: {
-                Text("Default batch size and learning rate decay are automatically adjusted based on GPU availability.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)

@@ -28,8 +28,6 @@ final class TrainingSession {
     var outputFileBookmarks: [Data] = []
     var outputFileNames: [String] = []
 
-    var trainDestinationBookmark: Data?
-    var trainDestinationPath: String?
 
     // MARK: - Architecture
 
@@ -48,7 +46,6 @@ final class TrainingSession {
     var seed: Int = 0
     var latencyOverride: Int?
     var esrThreshold: Double?
-    var silentMode: Bool = false
     var savePlot: Bool = true
     var fitMRSTFT: Bool = true
     var ignoreChecks: Bool = false
@@ -89,7 +86,6 @@ final class TrainingSession {
         batchSize: Int = 16,
         ny: Int = 8192,
         seed: Int = 0,
-        silentMode: Bool = false,
         savePlot: Bool = true,
         fitMRSTFT: Bool = true,
         ignoreChecks: Bool = false
@@ -105,7 +101,6 @@ final class TrainingSession {
         self.batchSize = batchSize
         self.ny = ny
         self.seed = seed
-        self.silentMode = silentMode
         self.savePlot = savePlot
         self.fitMRSTFT = fitMRSTFT
         self.ignoreChecks = ignoreChecks
