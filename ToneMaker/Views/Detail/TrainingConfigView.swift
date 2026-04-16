@@ -31,7 +31,7 @@ struct TrainingConfigView: View {
             advancedOptionsSection
         }
         .formStyle(.grouped)
-        .navigationTitle(session.displayName)
+        .navigationTitle(session.metadata?.namName ?? session.displayName)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button("Train", systemImage: "play.fill") {
