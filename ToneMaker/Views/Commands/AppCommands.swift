@@ -60,13 +60,13 @@ private struct ViewMenuCommands: Commands {
     var body: some Commands {
         CommandGroup(after: .sidebar) {
             Divider()
-            Button("Profile Studio") {
+            Button("Profile Studio", systemImage: "waveform.path") {
                 showProfileStudio?()
             }
             .keyboardShortcut("1")
             .disabled(showProfileStudio == nil)
 
-            Button("Library") {
+            Button("Library", systemImage: "square.grid.2x2") {
                 showLibrary?()
             }
             .keyboardShortcut("2")
