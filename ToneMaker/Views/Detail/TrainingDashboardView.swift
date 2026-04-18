@@ -11,7 +11,11 @@ struct TrainingDashboardView: View {
     @Environment(TrainingEngine.self) private var engine
     @Environment(\.modelContext) private var modelContext
 
-    private let circleSize: CGFloat = 250
+    private let tileSize: CGFloat = 250
+    private let tileCornerRadius: CGFloat = 28
+    private var tileShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: tileCornerRadius, style: .continuous)
+    }
 
     // MARK: - State Derivations
 
@@ -149,22 +153,22 @@ struct TrainingDashboardView: View {
 
     private var dashboardRow: some View {
         HStack(spacing: 0) {
-            esrCircle
+            esrTile
             Spacer()
             architecturePill
             Spacer()
-            statusCircle
+            statusTile
         }
     }
 
-    // MARK: - ESR Circle
+    // MARK: - ESR Tile
 
-    private var esrCircle: some View {
+    private var esrTile: some View {
         VStack(spacing: 10) {
             ZStack {
-                Circle()
+                tileShape
                     .fill(.secondary.opacity(0.08))
-                    .frame(width: circleSize, height: circleSize)
+                    .frame(width: tileSize, height: tileSize)
 
                 if let esr = esrValue {
                     Text(String(format: "%.4f", esr))
@@ -205,9 +209,9 @@ struct TrainingDashboardView: View {
             .clipShape(Capsule())
     }
 
-    // MARK: - Status Circle
+    // MARK: - Status Tile
 
-    private var statusCircle: some View {
+    private var statusTile: some View {
         VStack(spacing: 10) {
             ZStack {
                 if isTraining {
@@ -218,7 +222,7 @@ struct TrainingDashboardView: View {
                     resultIndicator
                 }
             }
-            .frame(width: circleSize, height: circleSize)
+            .frame(width: tileSize, height: tileSize)
 
             statusLabel
         }
@@ -226,7 +230,7 @@ struct TrainingDashboardView: View {
 
     private var trainingIndicator: some View {
         ZStack {
-            Circle().fill(Color.orange.opacity(0.1))
+            tileShape.fill(Color.orange.opacity(0.1))
             Image(systemName: "cube.transparent.fill")
                 .font(.system(size: 48))
                 .foregroundStyle(.orange)
@@ -236,7 +240,7 @@ struct TrainingDashboardView: View {
 
     private var queuedIndicator: some View {
         ZStack {
-            Circle().fill(Color.orange.opacity(0.1))
+            tileShape.fill(Color.orange.opacity(0.1))
             Image(systemName: "list.bullet.circle")
                 .font(.system(size: 48))
                 .foregroundStyle(.orange)
@@ -247,7 +251,7 @@ struct TrainingDashboardView: View {
     private var resultIndicator: some View {
         let quality = session.bestValidationESR.map { ESRQuality.from(esr: $0) }
 
-        Circle()
+        tileShape
             .fill((quality?.color ?? statusColor).opacity(0.1))
 
         Image(systemName: quality?.symbolName ?? session.status.symbolName)
