@@ -43,6 +43,9 @@ final class CaptureItem {
     @Relationship(inverse: \TrainingSession.captures)
     var sourceSession: TrainingSession?
 
+    @Relationship(inverse: \BatchItem.capture)
+    var sourceBatchItem: BatchItem?
+
     init() {}
 }
 

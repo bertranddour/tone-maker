@@ -1,0 +1,30 @@
+{
+  "configurations" : [
+    {
+      "id" : "7A6C89C2-07F4-4617-A0F4-996859869255",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:ToneMaker.xcodeproj",
+      "identifier" : "066C3D342F90199100A21FC4",
+      "name" : "ToneMaker"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : false,
+      "target" : {
+        "containerPath" : "container:ToneMaker.xcodeproj",
+        "identifier" : "066C3D432F90199200A21FC4",
+        "name" : "ToneMakerTests"
+      }
+    }
+  ],
+  "version" : 1
+}

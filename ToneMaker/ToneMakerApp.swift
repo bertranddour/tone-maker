@@ -9,6 +9,7 @@ struct ToneMakerApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             TrainingSession.self,
+            BatchItem.self,
             ModelMetadata.self,
             TrainingPreset.self,
             PersistedAudioFile.self,

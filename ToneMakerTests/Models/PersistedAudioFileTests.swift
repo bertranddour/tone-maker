@@ -33,32 +33,12 @@ struct PersistedAudioFileTests {
         #expect(file.roleRaw == "output")
     }
 
-    @Test func defaultOrder() {
-        let file = PersistedAudioFile(
-            fileName: "test.wav",
-            role: .output,
-            fileData: Data()
-        )
-        #expect(file.order == 0)
-    }
-
-    @Test func customOrder() {
-        let file = PersistedAudioFile(
-            fileName: "test.wav",
-            role: .output,
-            order: 3,
-            fileData: Data([0xFF])
-        )
-        #expect(file.order == 3)
-    }
-
     // MARK: - TrainingSession Integration
 
     @Test func newSessionHasNilPersistedAudioFiles() {
         let session = TrainingSession()
         #expect(session.persistedAudioFiles == nil)
         #expect(session.persistedInputFile == nil)
-        #expect(session.persistedOutputFiles.isEmpty)
     }
 
     @Test func persistedInputFileReturnsInputRole() {
@@ -71,24 +51,21 @@ struct PersistedAudioFileTests {
         #expect(session.persistedInputFile?.role == .input)
     }
 
-    @Test func persistedOutputFilesReturnsOutputRole() {
-        let session = TrainingSession()
-        let inputFile = PersistedAudioFile(fileName: "di.wav", role: .input, fileData: Data())
-        let output1 = PersistedAudioFile(fileName: "amp1.wav", role: .output, order: 0, fileData: Data())
-        let output2 = PersistedAudioFile(fileName: "amp2.wav", role: .output, order: 1, fileData: Data())
-        session.persistedAudioFiles = [output2, inputFile, output1]
-
-        let outputs = session.persistedOutputFiles
-        #expect(outputs.count == 2)
-        #expect(outputs[0].fileName == "amp1.wav")
-        #expect(outputs[1].fileName == "amp2.wav")
-    }
-
     @Test func persistedInputFileNilWhenNoInput() {
         let session = TrainingSession()
         let outputFile = PersistedAudioFile(fileName: "amp.wav", role: .output, fileData: Data())
         session.persistedAudioFiles = [outputFile]
 
         #expect(session.persistedInputFile == nil)
+    }
+
+    // MARK: - BatchItem Attachment
+
+    @Test func outputFileAttachedToBatchItem() {
+        let item = BatchItem(order: 0, outputFileName: "amp.wav")
+        let file = PersistedAudioFile(fileName: "amp.wav", role: .output, fileData: Data([0xAA]))
+        item.persistedOutputFile = file
+
+        #expect(item.persistedOutputFile?.fileName == "amp.wav")
     }
 }

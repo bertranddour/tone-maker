@@ -5,7 +5,9 @@ import UniformTypeIdentifiers
 /// Main configuration form for a training session.
 ///
 /// Combines audio file selection, model configuration (with inline metadata),
-/// training parameters, and advanced options in a single grouped form.
+/// training parameters, and advanced options in a single grouped form. Output
+/// files are represented as `BatchItem`s so per-capture name, validation,
+/// status, and result tracking happen independently.
 struct TrainingConfigView: View {
     @Bindable var session: TrainingSession
     @Environment(\.modelContext) private var modelContext
@@ -18,7 +20,7 @@ struct TrainingConfigView: View {
     @Query(sort: \TrainingPreset.name) private var presets: [TrainingPreset]
 
     @State private var inputValidation: InputValidationResult?
-    @State private var outputValidations: [String: InputValidationResult] = [:]
+    @State private var outputValidations: [UUID: InputValidationResult] = [:]
     @State private var showSavePreset = false
     @State private var presetName = ""
 
@@ -26,6 +28,9 @@ struct TrainingConfigView: View {
         Form {
             presetSection
             audioFilesSection
+            if !session.sortedBatchItems.isEmpty {
+                capturesSection
+            }
             modelSection
             trainingSection
             advancedOptionsSection
@@ -34,7 +39,7 @@ struct TrainingConfigView: View {
         .navigationTitle(session.metadata?.namName ?? session.displayName)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button("Train", systemImage: "play.fill") {
+                Button(primaryActionLabel, systemImage: primaryActionSymbol) {
                     startTraining()
                 }
                 .disabled(!canStartTraining)
@@ -101,7 +106,7 @@ struct TrainingConfigView: View {
                 AudioDropZone(
                     title: "Output Audio (Reamped)",
                     allowsMultipleSelection: true,
-                    selectedNames: session.outputFileNames,
+                    selectedNames: session.sortedBatchItems.map(\.outputFileName),
                     onSelection: handleOutputSelection
                 )
             }
@@ -118,6 +123,21 @@ struct TrainingConfigView: View {
                     warnings: allOutputWarnings,
                     errors: allOutputErrors
                 )
+            }
+        }
+    }
+
+    // MARK: - Captures Section (per-item names)
+
+    private var capturesSection: some View {
+        Section("Captures to Produce (\(session.sortedBatchItems.count))") {
+            ForEach(session.sortedBatchItems) { item in
+                BatchItemConfigRow(
+                    item: item,
+                    validation: outputValidations[item.id]
+                ) {
+                    removeItem(item)
+                }
             }
         }
     }
@@ -178,8 +198,6 @@ struct TrainingConfigView: View {
 
     // MARK: - Metadata Bindings
 
-    /// Creates a non-optional String binding for a metadata field.
-    /// Ensures metadata object exists before binding.
     private func metadataBinding(for keyPath: ReferenceWritableKeyPath<ModelMetadata, String?>) -> Binding<String> {
         Binding(
             get: {
@@ -221,12 +239,19 @@ struct TrainingConfigView: View {
 
     // MARK: - Computed
 
+    private var primaryActionLabel: String {
+        engine.isTraining ? "Add to Queue" : "Train"
+    }
+
+    private var primaryActionSymbol: String {
+        engine.isTraining ? "plus.circle" : "play.fill"
+    }
+
     private var canStartTraining: Bool {
         session.inputFileBookmark != nil
-            && !session.outputFileBookmarks.isEmpty
+            && !session.sortedBatchItems.isEmpty
             && (inputValidation?.isValid ?? true)
             && !hasOutputValidationErrors
-            && !engine.isTraining
     }
 
     private var hasOutputValidationIssues: Bool {
@@ -238,14 +263,14 @@ struct TrainingConfigView: View {
     }
 
     private var allOutputWarnings: [String] {
-        outputValidations.flatMap { (name, result) in
-            result.warnings.map { "\(name): \($0)" }
+        session.sortedBatchItems.flatMap { item in
+            (outputValidations[item.id]?.warnings ?? []).map { "\(item.outputFileName): \($0)" }
         }
     }
 
     private var allOutputErrors: [String] {
-        outputValidations.flatMap { (name, result) in
-            result.errors.map { "\(name): \($0)" }
+        session.sortedBatchItems.flatMap { item in
+            (outputValidations[item.id]?.errors ?? []).map { "\(item.outputFileName): \($0)" }
         }
     }
 
@@ -260,7 +285,6 @@ struct TrainingConfigView: View {
         session.inputFileBookmark = try? FileBookmark.create(for: url)
         inputValidation = InputFileValidator.validateInput(at: url)
 
-        // Persist file data for session relaunch
         for existing in (session.persistedAudioFiles ?? []) where existing.role == .input {
             modelContext.delete(existing)
         }
@@ -268,7 +292,6 @@ struct TrainingConfigView: View {
             let persisted = PersistedAudioFile(
                 fileName: url.lastPathComponent,
                 role: .input,
-                order: 0,
                 fileData: data
             )
             modelContext.insert(persisted)
@@ -282,49 +305,47 @@ struct TrainingConfigView: View {
     }
 
     private func handleOutputSelection(_ urls: [URL]) {
-        // Clear previous persisted output files
-        for existing in (session.persistedAudioFiles ?? []) where existing.role == .output {
-            modelContext.delete(existing)
-        }
+        let existingNames = Set(session.sortedBatchItems.map { $0.outputFileName.lowercased() })
+        let defaultName = session.metadata?.namName
+        var nextOrder = (session.sortedBatchItems.last?.order ?? -1) + 1
 
-        var bookmarks: [Data] = []
-        var names: [String] = []
-        outputValidations = [:]
-
-        for (index, url) in urls.enumerated() {
+        for url in urls where !existingNames.contains(url.lastPathComponent.lowercased()) {
             guard url.startAccessingSecurityScopedResource() else { continue }
             defer { url.stopAccessingSecurityScopedResource() }
 
-            if let bookmark = try? FileBookmark.create(for: url) {
-                bookmarks.append(bookmark)
-            }
-            names.append(url.lastPathComponent)
+            guard let bookmark = try? FileBookmark.create(for: url) else { continue }
+            let derivedName = url.deletingPathExtension().lastPathComponent
 
-            // Persist file data for session relaunch
+            let item = BatchItem(
+                order: nextOrder,
+                outputFileName: url.lastPathComponent,
+                captureName: (defaultName?.isEmpty == false ? defaultName! : derivedName)
+            )
+            item.outputFileBookmark = bookmark
+            item.session = session
+
             if let data = try? Data(contentsOf: url) {
                 let persisted = PersistedAudioFile(
                     fileName: url.lastPathComponent,
                     role: .output,
-                    order: index,
                     fileData: data
                 )
                 modelContext.insert(persisted)
-                if session.persistedAudioFiles == nil { session.persistedAudioFiles = [] }
-            session.persistedAudioFiles?.append(persisted)
+                item.persistedOutputFile = persisted
             }
 
-            // Validate against input if available
+            modelContext.insert(item)
+            session.batchItems = (session.batchItems ?? []) + [item]
+
             if let inputInfo = inputValidation?.wavInfo {
-                outputValidations[url.lastPathComponent] = InputFileValidator.validateOutput(at: url, against: inputInfo)
+                outputValidations[item.id] = InputFileValidator.validateOutput(at: url, against: inputInfo)
             }
+
+            nextOrder += 1
         }
 
-        session.outputFileBookmarks = bookmarks
-        session.outputFileNames = names
-
-        // Auto-populate Rig Name from first output filename if not already set
-        if let firstName = names.first {
-            let derived = firstName.replacingOccurrences(of: ".wav", with: "", options: .caseInsensitive)
+        if let first = session.sortedBatchItems.first?.outputFileName {
+            let derived = first.replacingOccurrences(of: ".wav", with: "", options: .caseInsensitive)
             let metadata = ensureMetadata()
             if metadata.namName == nil || metadata.namName?.isEmpty == true {
                 metadata.namName = derived
@@ -334,11 +355,22 @@ struct TrainingConfigView: View {
 
     private func revalidateOutputFiles(against inputInfo: WAVHeaderReader.WAVInfo) {
         outputValidations = [:]
-        for (index, bookmark) in session.outputFileBookmarks.enumerated() {
-            guard let url = FileBookmark.resolveAndAccess(bookmark) else { continue }
+        for item in session.sortedBatchItems {
+            guard let bookmark = item.outputFileBookmark,
+                  let url = FileBookmark.resolveAndAccess(bookmark) else { continue }
             defer { url.stopAccessingSecurityScopedResource() }
-            let name = index < session.outputFileNames.count ? session.outputFileNames[index] : url.lastPathComponent
-            outputValidations[name] = InputFileValidator.validateOutput(at: url, against: inputInfo)
+            outputValidations[item.id] = InputFileValidator.validateOutput(at: url, against: inputInfo)
+        }
+    }
+
+    private func removeItem(_ item: BatchItem) {
+        outputValidations.removeValue(forKey: item.id)
+        modelContext.delete(item)
+        // Reindex remaining items so order stays dense
+        var order = 0
+        for remaining in session.sortedBatchItems where remaining.id != item.id {
+            remaining.order = order
+            order += 1
         }
     }
 
@@ -346,7 +378,6 @@ struct TrainingConfigView: View {
     private func ensureMetadata() -> ModelMetadata {
         if let existing = session.metadata { return existing }
         let metadata = ModelMetadata()
-        // Auto-fill from Settings (gear type and tone type default in ModelMetadata init)
         if !defaultModeledBy.isEmpty {
             metadata.modeledBy = defaultModeledBy
         }
@@ -362,7 +393,7 @@ struct TrainingConfigView: View {
     }
 
     private func startTraining() {
-        engine.startTraining(session: session, modelContext: modelContext)
+        engine.enqueueTraining(session: session, modelContext: modelContext)
     }
 
     private func savePreset() {
@@ -370,5 +401,54 @@ struct TrainingConfigView: View {
         let preset = TrainingPreset.from(session: session, name: presetName)
         modelContext.insert(preset)
         presetName = ""
+    }
+}
+
+// MARK: - Batch Item Config Row
+
+private struct BatchItemConfigRow: View {
+    @Bindable var item: BatchItem
+    let validation: InputValidationResult?
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: statusSymbol)
+                .foregroundStyle(statusTint)
+                .imageScale(.medium)
+                .frame(width: 20)
+
+            VStack(alignment: .leading, spacing: 2) {
+                TextField("Capture Name", text: $item.captureName)
+                    .textFieldStyle(.plain)
+                    .lineLimit(1)
+
+                Text(item.outputFileName)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            Button(action: onRemove) {
+                Image(systemName: "trash")
+            }
+            .buttonStyle(.borderless)
+            .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 2)
+    }
+
+    private var statusSymbol: String {
+        if let validation, !validation.errors.isEmpty { return "exclamationmark.triangle.fill" }
+        if let validation, !validation.warnings.isEmpty { return "exclamationmark.circle" }
+        return "checkmark.circle"
+    }
+
+    private var statusTint: Color {
+        if let validation, !validation.errors.isEmpty { return .red }
+        if let validation, !validation.warnings.isEmpty { return .orange }
+        return .secondary
     }
 }

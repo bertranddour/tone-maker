@@ -1,5 +1,8 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import os.log
+
+private nonisolated let logger = Logger(subsystem: "boutique.bluewaves.ToneMaker", category: "FilePickerButton")
 
 /// A reusable button that triggers `.fileImporter` for file or directory selection.
 ///
@@ -79,7 +82,7 @@ struct FilePickerButton: View {
             case .success(let urls):
                 onSelection(urls)
             case .failure(let error):
-                print("File selection failed: \(error.localizedDescription)")
+                logger.error("File selection failed: \(error.localizedDescription)")
             }
         }
     }

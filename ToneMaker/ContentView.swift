@@ -15,6 +15,7 @@ struct ContentView: View {
     @State private var selectedCapture: CaptureItem?
     @State private var sessionToDelete: TrainingSession?
     @State private var showDeleteConfirmation = false
+    @State private var showCancelAllConfirmation = false
 
     // User preferences from Settings
     @AppStorage("defaultEpochs") private var defaultEpochs = Defaults.epochs
@@ -68,6 +69,17 @@ struct ContentView: View {
             } else {
                 Text("Delete '\(session.displayName)'? This cannot be undone.")
             }
+        }
+        .confirmationDialog(
+            "Cancel All Training?",
+            isPresented: $showCancelAllConfirmation
+        ) {
+            Button("Cancel All", role: .destructive) {
+                engine.cancelAll(modelContext: modelContext)
+            }
+            Button("Keep Running", role: .cancel) {}
+        } message: {
+            Text("This stops the active training and removes every queued session from the queue.")
         }
     }
 
@@ -128,9 +140,12 @@ struct ContentView: View {
     private var studioSidebar: some View {
         List(selection: $selectedSessionID) {
             if !activeSessions.isEmpty {
-                Section("Active") {
+                Section(activeSectionTitle) {
                     ForEach(activeSessions) { session in
-                        SessionRowView(session: session) {
+                        SessionRowView(
+                            session: session,
+                            queuePosition: queuePosition(for: session)
+                        ) {
                             sessionToDelete = session
                             showDeleteConfirmation = true
                         }
@@ -144,7 +159,7 @@ struct ContentView: View {
             if !completedSessions.isEmpty {
                 Section("History") {
                     ForEach(completedSessions) { session in
-                        SessionRowView(session: session) {
+                        SessionRowView(session: session, queuePosition: nil) {
                             sessionToDelete = session
                             showDeleteConfirmation = true
                         }
@@ -169,6 +184,14 @@ struct ContentView: View {
         }
         .navigationTitle("Profile Studio")
         .toolbar {
+            if showCancelAllButton {
+                ToolbarItem {
+                    Button("Cancel All", systemImage: "xmark.circle") {
+                        showCancelAllConfirmation = true
+                    }
+                    .help("Cancel active training and clear the queue")
+                }
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button("New Training", systemImage: "plus") {
                     createNewSession()
@@ -176,6 +199,30 @@ struct ContentView: View {
                 .keyboardShortcut("n", modifiers: .command)
             }
         }
+    }
+
+    private var activeSectionTitle: String {
+        let queued = queuedSessions.count
+        if queued > 0 {
+            return "Active  \u{00B7}  \(queued) queued"
+        }
+        return "Active"
+    }
+
+    private var showCancelAllButton: Bool {
+        engine.isTraining || !queuedSessions.isEmpty
+    }
+
+    private var queuedSessions: [TrainingSession] {
+        sessions
+            .filter { $0.status == .queued }
+            .sorted { ($0.queuedAt ?? .distantFuture) < ($1.queuedAt ?? .distantFuture) }
+    }
+
+    /// 1-based queue position for a queued session, or nil if not queued.
+    private func queuePosition(for session: TrainingSession) -> Int? {
+        guard session.status == .queued else { return nil }
+        return queuedSessions.firstIndex(of: session).map { $0 + 1 }
     }
 
     // MARK: - Library Sidebar
@@ -238,7 +285,7 @@ struct ContentView: View {
         switch session.status {
         case .configuring:
             TrainingConfigView(session: session)
-        case .validating, .training, .completed, .failed, .cancelled:
+        case .queued, .validating, .training, .completed, .failed, .cancelled:
             TrainingDashboardView(session: session)
         }
     }
@@ -319,6 +366,7 @@ struct ContentView: View {
 
 struct SessionRowView: View {
     @Bindable var session: TrainingSession
+    var queuePosition: Int?
     var onDelete: () -> Void
 
     @FocusState private var isRenaming: Bool
@@ -346,7 +394,15 @@ struct SessionRowView: View {
 
             Spacer()
 
-            if let esr = session.validationESR {
+            if let position = queuePosition {
+                Text("#\(position)")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.orange)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(.orange.opacity(0.12))
+                    .clipShape(Capsule())
+            } else if let esr = session.bestValidationESR {
                 Text(String(format: "%.4f", esr))
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
@@ -388,7 +444,7 @@ extension Array where Element: Hashable {
     ContentView()
         .environment(TrainingEngine())
         .modelContainer(
-            for: [TrainingSession.self, ModelMetadata.self, TrainingPreset.self,
+            for: [TrainingSession.self, BatchItem.self, ModelMetadata.self, TrainingPreset.self,
                   PersistedAudioFile.self, CaptureItem.self],
             inMemory: true
         )

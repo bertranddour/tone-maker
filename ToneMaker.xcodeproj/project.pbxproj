@@ -24,6 +24,7 @@
 		066C3D352F90199100A21FC4 /* ToneMaker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ToneMaker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		066C3D442F90199200A21FC4 /* ToneMakerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ToneMakerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		066C3E8D2F9058F000A21FC4 /* ToneMaker.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = ToneMaker.icon; sourceTree = "<group>"; };
+		067B513D2F9387F30034E637 /* ToneMaker.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = ToneMaker.xctestplan; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -60,6 +61,7 @@
 		066C3D2C2F90199100A21FC4 = {
 			isa = PBXGroup;
 			children = (
+				067B513D2F9387F30034E637 /* ToneMaker.xctestplan */,
 				066C3D372F90199100A21FC4 /* ToneMaker */,
 				066C3D472F90199200A21FC4 /* ToneMakerTests */,
 				066C3D362F90199100A21FC4 /* Products */,

@@ -3,8 +3,9 @@ import SwiftData
 
 /// Core entity representing a single NAM training run.
 ///
-/// Stores all configuration parameters, file references (as security-scoped bookmarks),
-/// training results, and relationships to metadata and presets.
+/// Holds configuration parameters, the input (DI) file reference, and a collection
+/// of `BatchItem`s — one per output (reamped) file to train. Per-item results
+/// (ESR, latency, error, produced `CaptureItem`) live on the `BatchItem`, not here.
 @Model
 final class TrainingSession {
 
@@ -19,15 +20,14 @@ final class TrainingSession {
     /// Raw string backing for `TrainingStatus`. Use the computed `status` property for typed access.
     var statusRaw: String = TrainingStatus.configuring.rawValue
 
-    // MARK: - File References (security-scoped bookmarks for sandbox)
+    /// Timestamp set when the user enqueues this session for training. The engine
+    /// advances the queue by picking the oldest `.queued` session (earliest `queuedAt`).
+    var queuedAt: Date?
+
+    // MARK: - Input File Reference
 
     var inputFileBookmark: Data?
     var inputFileName: String?
-
-    /// Multiple output files support batch training. Each entry is a security-scoped bookmark.
-    var outputFileBookmarks: [Data] = []
-    var outputFileNames: [String] = []
-
 
     // MARK: - Architecture
 
@@ -55,15 +55,8 @@ final class TrainingSession {
 
     // MARK: - Results
 
-    var validationESR: Double?
-    var outputModelPaths: [String] = []
-    var comparisonPlotPath: String?
     var trainingLog: String?
-
-    // MARK: - Detected During Validation
-
     var detectedInputVersion: String?
-    var calibratedLatency: Int?
 
     // MARK: - Relationships
 
@@ -71,6 +64,7 @@ final class TrainingSession {
     var preset: TrainingPreset?
     @Relationship(deleteRule: .cascade) var persistedAudioFiles: [PersistedAudioFile]?
     @Relationship(deleteRule: .nullify) var captures: [CaptureItem]?
+    @Relationship(deleteRule: .cascade) var batchItems: [BatchItem]?
 
     // MARK: - Init
 
@@ -126,27 +120,43 @@ extension TrainingSession {
         set { architectureSizeRaw = newValue.rawValue }
     }
 
-    /// Display name: prefers user-set sessionName, then output filename, then fallback.
+    /// Display name: prefers user-set sessionName, then first batch item's file, then fallback.
     var displayName: String {
         if let name = sessionName, !name.isEmpty { return name }
-        if let first = outputFileNames.first, !first.isEmpty {
-            return first.replacingOccurrences(of: ".wav", with: "")
+        if let first = sortedBatchItems.first?.outputFileName, !first.isEmpty {
+            return first.replacingOccurrences(of: ".wav", with: "", options: .caseInsensitive)
         }
         return "Untitled Session"
     }
 
     /// Whether this session supports batch training (multiple output files).
     var isBatchTraining: Bool {
-        outputFileBookmarks.count > 1
+        (batchItems?.count ?? 0) > 1
+    }
+
+    /// Batch items sorted by `order` for deterministic display and execution.
+    var sortedBatchItems: [BatchItem] {
+        (batchItems ?? []).sorted { $0.order < $1.order }
+    }
+
+    /// The best (lowest) ESR across completed batch items, or `nil` if none produced one.
+    var bestValidationESR: Double? {
+        sortedBatchItems.compactMap(\.validationESR).min()
+    }
+
+    /// Whether the session has at least one item and every item is `.completed`.
+    var allItemsSucceeded: Bool {
+        let items = sortedBatchItems
+        return !items.isEmpty && items.allSatisfy { $0.status == .completed }
+    }
+
+    /// Whether any item is `.completed`. Used to distinguish "fully failed" from "partial success".
+    var hasAnyCompletedItem: Bool {
+        sortedBatchItems.contains { $0.status == .completed }
     }
 
     /// The persisted input (reference) audio file, if any.
     var persistedInputFile: PersistedAudioFile? {
         (persistedAudioFiles ?? []).first { $0.role == .input }
-    }
-
-    /// The persisted output (reamped) audio files, sorted by selection order.
-    var persistedOutputFiles: [PersistedAudioFile] {
-        (persistedAudioFiles ?? []).filter { $0.role == .output }.sorted { $0.order < $1.order }
     }
 }

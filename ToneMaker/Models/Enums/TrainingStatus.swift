@@ -4,6 +4,7 @@ import SwiftUI
 /// Status of a training session lifecycle.
 nonisolated enum TrainingStatus: String, Codable, Sendable {
     case configuring
+    case queued
     case validating
     case training
     case completed
@@ -11,13 +12,21 @@ nonisolated enum TrainingStatus: String, Codable, Sendable {
     case cancelled
 
     var displayName: String {
-        rawValue.capitalized
+        switch self {
+        case .configuring: "Configuring"
+        case .queued: "Queued"
+        case .validating: "Validating"
+        case .training: "Training"
+        case .completed: "Completed"
+        case .failed: "Failed"
+        case .cancelled: "Cancelled"
+        }
     }
 
-    /// Whether this status represents an active (in-progress) session.
+    /// Whether this status represents an active (in-progress or about-to-run) session.
     var isActive: Bool {
         switch self {
-        case .configuring, .validating, .training: true
+        case .configuring, .queued, .validating, .training: true
         case .completed, .failed, .cancelled: false
         }
     }
@@ -26,6 +35,7 @@ nonisolated enum TrainingStatus: String, Codable, Sendable {
     var symbolName: String {
         switch self {
         case .configuring: "slider.horizontal.3"
+        case .queued: "list.bullet.circle"
         case .validating: "checkmark.shield"
         case .training: "cube.transparent"
         case .completed: "checkmark.circle.fill"
@@ -38,6 +48,7 @@ nonisolated enum TrainingStatus: String, Codable, Sendable {
     var tintColor: Color {
         switch self {
         case .configuring: .secondary
+        case .queued: .orange
         case .validating: .blue
         case .training: .orange
         case .completed: .green
