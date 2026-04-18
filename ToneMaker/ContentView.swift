@@ -81,6 +81,21 @@ struct ContentView: View {
         } message: {
             Text("This stops the active training and removes every queued session from the queue.")
         }
+        .focusedSceneValue(engine)
+        .focusedSceneValue(\.selectedSession, selectedSession)
+        .focusedSceneValue(\.createNewSessionAction, createNewSession)
+        .focusedSceneValue(\.requestCancelAllAction, showCancelAllButton ? { showCancelAllConfirmation = true } : nil)
+        .focusedSceneValue(\.showProfileStudioAction) {
+            sidebarMode = .profileStudio
+        }
+        .focusedSceneValue(\.showLibraryAction) {
+            sidebarMode = .library
+        }
+    }
+
+    private var selectedSession: TrainingSession? {
+        guard let selectedSessionID else { return nil }
+        return sessions.first { $0.id == selectedSessionID }
     }
 
     // MARK: - Sidebar Mode
@@ -196,7 +211,6 @@ struct ContentView: View {
                 Button("New Training", systemImage: "plus") {
                     createNewSession()
                 }
-                .keyboardShortcut("n", modifiers: .command)
             }
         }
     }

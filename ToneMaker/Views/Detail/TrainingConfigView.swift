@@ -78,6 +78,9 @@ struct TrainingConfigView: View {
                 }
             }
         }
+        .focusedSceneValue(\.showSavePresetAction) {
+            showSavePreset = true
+        }
         .alert("Save Preset", isPresented: $showSavePreset) {
             TextField("Preset Name", text: $presetName)
             Button("Save") { savePreset() }
