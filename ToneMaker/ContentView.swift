@@ -8,6 +8,8 @@ struct ContentView: View {
     private var sessions: [TrainingSession]
     @Query(sort: \CaptureItem.createdAt, order: .reverse)
     private var captures: [CaptureItem]
+    @Query(sort: \TrainingPreset.name)
+    private var presets: [TrainingPreset]
 
     @State private var sidebarMode: SidebarMode = .profileStudio
     @State private var selectedSessionID: TrainingSession.ID?
@@ -83,6 +85,7 @@ struct ContentView: View {
         }
         .focusedSceneValue(engine)
         .focusedSceneValue(\.selectedSession, selectedSession)
+        .focusedSceneValue(\.trainingPresets, presets)
         .focusedSceneValue(\.createNewSessionAction, createNewSession)
         .focusedSceneValue(\.requestCancelAllAction, showCancelAllButton ? { showCancelAllConfirmation = true } : nil)
         .focusedSceneValue(\.showProfileStudioAction) {

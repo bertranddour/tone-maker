@@ -13,6 +13,7 @@ private nonisolated let helpURL = URL(string: "https://github.com/bertranddour/t
 /// no window is key, which disables dependent menu items automatically.
 extension FocusedValues {
     @Entry var selectedSession: TrainingSession?
+    @Entry var trainingPresets: [TrainingPreset]?
     @Entry var createNewSessionAction: (() -> Void)?
     @Entry var requestCancelAllAction: (() -> Void)?
     @Entry var showProfileStudioAction: (() -> Void)?
@@ -130,15 +131,19 @@ private struct PresetsMenuCommands: Commands {
     }
 }
 
-/// Extracted so `@Query` and other dynamic properties bind correctly inside the
-/// commands hierarchy.
+/// Reads the preset list from `FocusedValues` — published by `ContentView`'s
+/// `@Query` — because `Commands` don't inherit the scene's `.modelContainer`
+/// environment, so a local `@Query` fetches against an ephemeral in-memory
+/// container and emits a runtime warning.
 private struct PresetsMenuContent: View {
-    @Query(sort: \TrainingPreset.name) private var presets: [TrainingPreset]
+    @FocusedValue(\.trainingPresets) private var presets
     @FocusedValue(\.selectedSession) private var session
     @FocusedValue(\.showSavePresetAction) private var showSavePreset
 
     @AppStorage("selectedSettingsTab") private var selectedTab = SettingsTab.environment
     @Environment(\.openSettings) private var openSettings
+
+    private var availablePresets: [TrainingPreset] { presets ?? [] }
 
     var body: some View {
         Button("Save Current as Preset\u{2026}") {
@@ -150,22 +155,22 @@ private struct PresetsMenuContent: View {
         Divider()
 
         Menu("Apply Preset") {
-            ForEach(presets) { preset in
+            ForEach(availablePresets) { preset in
                 Button(preset.name) {
                     if let session { preset.apply(to: session) }
                 }
             }
         }
-        .disabled(session == nil || presets.isEmpty)
+        .disabled(session == nil || availablePresets.isEmpty)
 
         Menu("Update Preset from Current") {
-            ForEach(presets) { preset in
+            ForEach(availablePresets) { preset in
                 Button(preset.name) {
                     if let session { preset.update(from: session) }
                 }
             }
         }
-        .disabled(session == nil || presets.isEmpty)
+        .disabled(session == nil || availablePresets.isEmpty)
 
         Divider()
 
