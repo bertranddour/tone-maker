@@ -1,21 +1,38 @@
 import SwiftUI
 
+/// UserDefaults-persisted selection for the Settings window's `TabView`.
+///
+/// Int-backed so it round-trips cleanly through `@AppStorage`. Any view can
+/// open Settings to a specific tab by writing this key then calling the
+/// `openSettings` environment action.
+nonisolated enum SettingsTab: Int, CaseIterable {
+    case environment = 0
+    case profile = 1
+    case presets = 2
+    case training = 3
+}
+
 /// Main settings view shown in the Settings window (Cmd+,).
 struct SettingsView: View {
+    @AppStorage("selectedSettingsTab") private var selectedTab = SettingsTab.environment
+
     var body: some View {
-        TabView {
-            Tab("Environment", systemImage: "terminal") {
+        TabView(selection: $selectedTab) {
+            Tab("Environment", systemImage: "terminal", value: SettingsTab.environment) {
                 EnvironmentSettingsView()
             }
-            Tab("Profile", systemImage: "person.circle") {
+            Tab("Profile", systemImage: "person.circle", value: SettingsTab.profile) {
                 ProfileSettingsView()
             }
-            Tab("Training", systemImage: "cube.transparent") {
+            Tab("Presets", systemImage: "slider.horizontal.3", value: SettingsTab.presets) {
+                PresetsSettingsView()
+            }
+            Tab("Training", systemImage: "cube.transparent", value: SettingsTab.training) {
                 TrainingSettingsView()
             }
         }
         .scenePadding()
-        .frame(minWidth: 480, minHeight: 280)
+        .frame(minWidth: 480, minHeight: 360)
     }
 }
 

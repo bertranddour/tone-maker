@@ -12,10 +12,12 @@ struct TrainingConfigView: View {
     @Bindable var session: TrainingSession
     @Environment(\.modelContext) private var modelContext
     @Environment(TrainingEngine.self) private var engine
+    @Environment(\.openSettings) private var openSettings
 
     @AppStorage("defaultModeledBy") private var defaultModeledBy = ""
     @AppStorage("defaultInputLevelDBu") private var defaultInputLevelDBu: Double = 0.0
     @AppStorage("defaultOutputLevelDBu") private var defaultOutputLevelDBu: Double = 0.0
+    @AppStorage("selectedSettingsTab") private var selectedSettingsTab = SettingsTab.environment
 
     @Query(sort: \TrainingPreset.name) private var presets: [TrainingPreset]
 
@@ -26,7 +28,6 @@ struct TrainingConfigView: View {
 
     var body: some View {
         Form {
-            presetSection
             audioFilesSection
             if !session.sortedBatchItems.isEmpty {
                 capturesSection
@@ -49,16 +50,30 @@ struct TrainingConfigView: View {
 
             ToolbarItem {
                 Menu("Preset", systemImage: "slider.horizontal.3") {
-                    Button("Save Current as Preset\u{2026}") {
+                    Button("Save Current as Preset\u{2026}", systemImage: "plus") {
                         showSavePreset = true
                     }
                     if !presets.isEmpty {
                         Divider()
-                        ForEach(presets) { preset in
-                            Button(preset.name) {
-                                preset.apply(to: session)
+                        Menu("Apply Preset") {
+                            ForEach(presets) { preset in
+                                Button(preset.name) {
+                                    preset.apply(to: session)
+                                }
                             }
                         }
+                        Menu("Update Preset from Current") {
+                            ForEach(presets) { preset in
+                                Button(preset.name) {
+                                    preset.update(from: session)
+                                }
+                            }
+                        }
+                    }
+                    Divider()
+                    Button("Manage Presets\u{2026}", systemImage: "gearshape") {
+                        selectedSettingsTab = .presets
+                        openSettings()
                     }
                 }
             }
@@ -72,22 +87,6 @@ struct TrainingConfigView: View {
         }
         .onChange(of: session.modelType) { _, newType in
             session.learningRate = Defaults.learningRate(for: newType)
-        }
-    }
-
-    // MARK: - Preset Section
-
-    @ViewBuilder
-    private var presetSection: some View {
-        if !presets.isEmpty {
-            Section {
-                Picker("Load Preset", selection: .constant("")) {
-                    Text("Custom").tag("")
-                    ForEach(presets) { preset in
-                        Text(preset.name).tag(preset.id.uuidString)
-                    }
-                }
-            }
         }
     }
 
@@ -397,10 +396,13 @@ struct TrainingConfigView: View {
     }
 
     private func savePreset() {
-        guard !presetName.isEmpty else { return }
-        let preset = TrainingPreset.from(session: session, name: presetName)
+        let trimmed = presetName.trimmingCharacters(in: .whitespacesAndNewlines)
+        defer { presetName = "" }
+        guard !trimmed.isEmpty else { return }
+        let unique = uniqueName(trimmed, existing: presets.map(\.name))
+        let preset = TrainingPreset.from(session: session, name: unique)
         modelContext.insert(preset)
-        presetName = ""
+        session.preset = preset
     }
 }
 

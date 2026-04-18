@@ -10,6 +10,8 @@ final class TrainingPreset {
     var id: UUID = UUID()
     var name: String = ""
     var createdAt: Date = Date()
+    var updatedAt: Date = Date()
+    var lastUsedAt: Date?
 
     // MARK: - Architecture
 
@@ -28,7 +30,8 @@ final class TrainingPreset {
 
     // MARK: - Relationships
 
-    @Relationship(inverse: \TrainingSession.preset)
+    /// `.nullify`: deleting a preset clears `session.preset` but preserves the sessions themselves.
+    @Relationship(deleteRule: .nullify, inverse: \TrainingSession.preset)
     var sessions: [TrainingSession]?
 
     init(
@@ -48,6 +51,7 @@ final class TrainingPreset {
         self.id = id
         self.name = name
         self.createdAt = createdAt
+        self.updatedAt = createdAt
         self.modelTypeRaw = modelType.rawValue
         self.architectureSizeRaw = architectureSize.rawValue
         self.epochs = epochs
@@ -107,5 +111,39 @@ extension TrainingPreset {
         session.seed = seed
         session.fitMRSTFT = fitMRSTFT
         session.preset = self
+        lastUsedAt = Date()
+    }
+
+    /// Overwrites this preset's parameters from the given session.
+    func update(from session: TrainingSession) {
+        modelType = session.modelType
+        architectureSize = session.architectureSize
+        epochs = session.epochs
+        learningRate = session.learningRate
+        learningRateDecay = session.learningRateDecay
+        batchSize = session.batchSize
+        ny = session.ny
+        seed = session.seed
+        fitMRSTFT = session.fitMRSTFT
+        updatedAt = Date()
+    }
+}
+
+// MARK: - Unique Name Helper
+
+/// Appends " (copy)", " (copy 2)", … to `name` until it does not appear in `existing`.
+///
+/// Comparison is case-insensitive to match Finder conventions.
+func uniqueName(_ name: String, existing: [String]) -> String {
+    let existingLower = Set(existing.map { $0.lowercased() })
+    guard existingLower.contains(name.lowercased()) else { return name }
+
+    var counter = 1
+    while true {
+        let candidate = counter == 1 ? "\(name) (copy)" : "\(name) (copy \(counter))"
+        if !existingLower.contains(candidate.lowercased()) {
+            return candidate
+        }
+        counter += 1
     }
 }
