@@ -140,13 +140,12 @@ struct TrainingDashboardView: View {
     }
 
     private func stripColor(for item: BatchItem) -> Color {
-        switch item.status {
-        case .pending: return .secondary.opacity(0.2)
-        case .running: return .orange.opacity(0.8)
-        case .completed: return .green.opacity(0.8)
-        case .failed: return .red.opacity(0.8)
-        case .cancelled, .skipped: return .secondary.opacity(0.4)
+        let opacity: Double = switch item.status {
+        case .pending: 0.2
+        case .running, .completed, .failed: 0.8
+        case .cancelled, .skipped: 0.4
         }
+        return item.status.tintColor.opacity(opacity)
     }
 
     // MARK: - Dashboard Row

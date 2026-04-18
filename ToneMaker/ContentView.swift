@@ -443,14 +443,10 @@ struct SessionRowView: View {
 
 // MARK: - Array Extension
 
-extension Array where Element: Hashable {
-    /// Returns unique elements preserving first occurrence, sorted alphabetically for strings.
-    var uniqueSorted: [Element] {
-        let unique = Array(Set(self))
-        if let strings = unique as? [String] {
-            return strings.sorted() as! [Element]
-        }
-        return unique
+extension Array where Element == String {
+    /// Returns unique strings sorted alphabetically.
+    var uniqueSorted: [String] {
+        Array(Set(self)).sorted()
     }
 }
 
