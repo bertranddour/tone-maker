@@ -17,6 +17,15 @@ struct TrainingDashboardView: View {
         RoundedRectangle(cornerRadius: tileCornerRadius, style: .continuous)
     }
 
+    /// Which tab is visible in the dashboard's bottom pane.
+    private enum BottomTab: String, CaseIterable, Identifiable {
+        case chart = "Chart"
+        case log = "Log"
+        var id: String { rawValue }
+    }
+
+    @State private var bottomTab: BottomTab = .chart
+
     // MARK: - State Derivations
 
     private var isTraining: Bool {
@@ -89,10 +98,58 @@ struct TrainingDashboardView: View {
 
             Spacer()
 
-            logSection
+            bottomSection
         }
         .padding()
         .navigationTitle(rigName)
+    }
+
+    // MARK: - Bottom Section (Chart / Log)
+
+    /// The batch item whose metrics drive the chart. Live while training, best-ESR
+    /// afterward so completed sessions open on their best-performing curve.
+    private var displayedItem: BatchItem? {
+        if let current = currentItem { return current }
+        let completed = session.sortedBatchItems.filter { $0.validationESR != nil }
+        if let best = completed.min(by: { ($0.validationESR ?? .infinity) < ($1.validationESR ?? .infinity) }) {
+            return best
+        }
+        return session.sortedBatchItems.first
+    }
+
+    private var displayedMetrics: [TrainingMetric] {
+        displayedItem?.lossCurve ?? []
+    }
+
+    @ViewBuilder
+    private var bottomSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(bottomTab == .chart ? "Validation Loss" : "Training Log")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Picker("", selection: $bottomTab) {
+                    ForEach(BottomTab.allCases) { tab in
+                        Text(tab.rawValue).tag(tab)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .controlSize(.small)
+                .fixedSize()
+            }
+
+            Group {
+                switch bottomTab {
+                case .chart:
+                    LossChartView(metrics: displayedMetrics)
+                case .log:
+                    LogOutputView(text: isTraining ? engine.logOutput : (session.trainingLog ?? ""))
+                }
+            }
+            .frame(height: 240)
+        }
     }
 
     // MARK: - Epoch Progress Bar
@@ -336,16 +393,4 @@ struct TrainingDashboardView: View {
         return count == 1 ? "Retry 1 Failed Item" : "Retry \(count) Failed Items"
     }
 
-    // MARK: - Log Section
-
-    private var logSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Training Log")
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.secondary)
-
-            LogOutputView(text: isTraining ? engine.logOutput : (session.trainingLog ?? ""))
-                .frame(height: 240)
-        }
-    }
 }

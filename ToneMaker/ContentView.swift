@@ -91,6 +91,21 @@ struct ContentView: View {
         .focusedSceneValue(\.showLibraryAction) {
             sidebarMode = .library
         }
+        .onChange(of: pendingSessionCount, initial: true) { _, newValue in
+            TrainingNotifier.shared.updateDockBadge(pendingSessionCount: newValue)
+        }
+    }
+
+    /// Count of sessions that are currently training or waiting in the queue.
+    /// Drives the Dock tile badge so users can see at a glance whether the app
+    /// still has work in flight when it's in the background.
+    private var pendingSessionCount: Int {
+        sessions.reduce(0) { count, session in
+            switch session.status {
+            case .queued, .validating, .training: count + 1
+            default: count
+            }
+        }
     }
 
     private var selectedSession: TrainingSession? {

@@ -6,6 +6,8 @@ nonisolated enum TrainingEvent: Sendable, Equatable {
     case log(String)
     /// An epoch completed with the given loss value.
     case epochCompleted(epoch: Int, totalEpochs: Int)
+    /// Validation loss sample captured mid-training for the loss curve.
+    case epochProgress(epoch: Int, valLoss: Double)
     /// ESR result from validation.
     case esrResult(Double)
     /// Latency was calibrated or specified.
@@ -44,17 +46,11 @@ nonisolated struct OutputParser: Sendable {
 
         var events: [TrainingEvent] = [.log(line)]
 
-        // Epoch progress from custom ToneMaker callback or Lightning tqdm
-        if let epochMatch = parseEpoch(trimmed) {
-            events.append(epochMatch)
-        }
-
-        // Live val_loss from TONEMAKER_EPOCH callback (shown as current ESR during training)
-        if let match = trimmed.firstMatch(of: /val_loss=([0-9.eE\-+]+)/) {
-            if let valLoss = Double(match.1) {
-                events.append(.esrResult(valLoss))
-            }
-        }
+        // Epoch progress from custom ToneMaker callback or Lightning tqdm.
+        // For TONEMAKER_EPOCH lines that carry val_loss, both .epochCompleted
+        // and .epochProgress fire so consumers can track either counter-only
+        // progression or the full loss curve.
+        events.append(contentsOf: parseEpoch(trimmed))
 
         // ESR result from plotting
         // Pattern: "Error-signal ratio = 0.0123"
@@ -115,29 +111,37 @@ nonisolated struct OutputParser: Sendable {
     /// - "TONEMAKER_EPOCH 5/100" (custom callback, no val_loss yet)
     /// - "Epoch 5: 100%|████| 42/42" (tqdm, if visible)
     /// - "Epoch 12/100 ..." (Lightning summary)
-    private func parseEpoch(_ line: String) -> TrainingEvent? {
+    ///
+    /// Returns an ordered list — `.epochCompleted` first, plus `.epochProgress`
+    /// when the line carries a parseable `val_loss=`.
+    private func parseEpoch(_ line: String) -> [TrainingEvent] {
         // Pattern 1: Custom ToneMaker callback (reliable, always present)
         // Format: "TONEMAKER_EPOCH 5/100 val_loss=0.123456"
         if let match = line.firstMatch(of: /TONEMAKER_EPOCH\s+(\d+)\/(\d+)/) {
             let epoch = Int(match.1) ?? 0
             let total = Int(match.2) ?? 0
-            return .epochCompleted(epoch: epoch, totalEpochs: total)
+            var events: [TrainingEvent] = [.epochCompleted(epoch: epoch, totalEpochs: total)]
+            if let lossMatch = line.firstMatch(of: /val_loss=([0-9.eE\-+]+)/),
+               let valLoss = Double(lossMatch.1) {
+                events.append(.epochProgress(epoch: epoch, valLoss: valLoss))
+            }
+            return events
         }
 
         // Pattern 2: "Epoch N:" (tqdm style, 0-indexed)
         if let match = line.firstMatch(of: /Epoch\s+(\d+):/) {
             let epoch = Int(match.1) ?? 0
-            return .epochCompleted(epoch: epoch + 1, totalEpochs: 0)
+            return [.epochCompleted(epoch: epoch + 1, totalEpochs: 0)]
         }
 
         // Pattern 3: "Epoch N/M" (slash style, Lightning summary)
         if let match = line.firstMatch(of: /Epoch\s+(\d+)\/(\d+)/) {
             let epoch = Int(match.1) ?? 0
             let total = Int(match.2) ?? 0
-            return .epochCompleted(epoch: epoch, totalEpochs: total)
+            return [.epochCompleted(epoch: epoch, totalEpochs: total)]
         }
 
-        return nil
+        return []
     }
 
     /// Parses ESR from output.

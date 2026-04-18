@@ -29,11 +29,26 @@ struct OutputParserTests {
     @Test func parsesToneMakerEpochCallback() {
         let events = parser.parse(line: "TONEMAKER_EPOCH 5/100 val_loss=0.123456")
         #expect(events.contains(.epochCompleted(epoch: 5, totalEpochs: 100)))
+        #expect(events.contains(.epochProgress(epoch: 5, valLoss: 0.123456)))
     }
 
     @Test func parsesToneMakerEpochNoValLoss() {
         let events = parser.parse(line: "TONEMAKER_EPOCH 1/200")
         #expect(events.contains(.epochCompleted(epoch: 1, totalEpochs: 200)))
+        #expect(!events.contains(where: {
+            if case .epochProgress = $0 { return true }
+            return false
+        }))
+    }
+
+    @Test func toneMakerEpochWithValLossDoesNotEmitEsrResult() {
+        // Standalone val_loss parsing was removed — mid-training val_loss is now
+        // a distinct .epochProgress event so it doesn't overwrite the final ESR.
+        let events = parser.parse(line: "TONEMAKER_EPOCH 5/100 val_loss=0.123456")
+        #expect(!events.contains(where: {
+            if case .esrResult = $0 { return true }
+            return false
+        }))
     }
 
     @Test func parsesEpochColonPattern() {

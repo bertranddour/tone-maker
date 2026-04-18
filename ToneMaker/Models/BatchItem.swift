@@ -41,6 +41,10 @@ final class BatchItem {
     var comparisonPlotPath: String?
     var errorMessage: String?
 
+    /// Per-epoch validation-loss series captured during training.
+    /// Populated live as the trainer emits `TONEMAKER_EPOCH` callbacks.
+    var lossCurve: [TrainingMetric] = []
+
     // MARK: - Relationships
 
     @Relationship(inverse: \TrainingSession.batchItems)

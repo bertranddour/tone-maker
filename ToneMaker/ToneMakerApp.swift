@@ -17,7 +17,7 @@ struct ToneMakerApp: App {
         ])
         let modelConfiguration = ModelConfiguration(
             schema: schema,
-            isStoredInMemoryOnly: false
+            cloudKitDatabase: .private("iCloud.boutique.bluewaves.ToneMaker")
         )
 
         do {

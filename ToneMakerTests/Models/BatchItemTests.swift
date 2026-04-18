@@ -22,6 +22,19 @@ struct BatchItemTests {
         #expect(item.session == nil)
         #expect(item.capture == nil)
         #expect(item.persistedOutputFile == nil)
+        #expect(item.lossCurve.isEmpty)
+    }
+
+    // MARK: - Loss Curve
+
+    @Test func lossCurveAppendsInOrder() {
+        let item = BatchItem()
+        item.lossCurve.append(TrainingMetric(epoch: 1, valLoss: 0.5))
+        item.lossCurve.append(TrainingMetric(epoch: 2, valLoss: 0.25))
+        item.lossCurve.append(TrainingMetric(epoch: 3, valLoss: 0.125))
+        #expect(item.lossCurve.count == 3)
+        #expect(item.lossCurve.map(\.epoch) == [1, 2, 3])
+        #expect(item.lossCurve.last?.valLoss == 0.125)
     }
 
     @Test func customInit() {

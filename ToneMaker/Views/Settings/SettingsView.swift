@@ -181,6 +181,7 @@ struct TrainingSettingsView: View {
     @AppStorage("defaultEpochs") private var defaultEpochs = Defaults.epochs
     @AppStorage("defaultArchitecture") private var defaultArchitecture = ModelArchitecture.waveNet.rawValue
     @AppStorage("defaultArchitectureSize") private var defaultArchitectureSize = ArchitectureSize.standard.rawValue
+    @AppStorage("notifyOnTrainingFinish") private var notifyOnTrainingFinish = true
 
     var body: some View {
         Form {
@@ -202,6 +203,16 @@ struct TrainingSettingsView: View {
                         Text(size.displayName).tag(size.rawValue)
                     }
                 }
+            }
+
+            Section {
+                Toggle("Notify when training finishes", isOn: $notifyOnTrainingFinish)
+            } header: {
+                Text("Notifications")
+            } footer: {
+                Text("Posts a local notification when a training session completes, fails, or is cancelled.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)

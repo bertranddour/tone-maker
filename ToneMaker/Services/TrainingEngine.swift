@@ -48,6 +48,7 @@ final class TrainingEngine {
     /// Starts the session immediately if the engine is idle; otherwise marks it `.queued`
     /// for auto-advance when the current session finishes.
     func enqueueTraining(session: TrainingSession, modelContext: ModelContext) {
+        Task { await TrainingNotifier.shared.requestAuthorizationIfNeeded() }
         if !isTraining {
             startTraining(session: session, modelContext: modelContext)
         } else {
@@ -135,6 +136,7 @@ final class TrainingEngine {
         item.comparisonPlotPath = nil
         item.startedAt = nil
         item.completedAt = nil
+        item.lossCurve = []
     }
 
     private func requeueIfTerminal(_ session: TrainingSession, modelContext: ModelContext) {
@@ -347,6 +349,7 @@ final class TrainingEngine {
         }
 
         logger.info("Session \(session.displayName) finished: \(session.status.displayName)")
+        TrainingNotifier.shared.notifyTrainingFinished(session: session)
     }
 
     private func esrMeetsThreshold(_ esr: Double, threshold: Double?) -> Bool {
@@ -383,6 +386,9 @@ final class TrainingEngine {
             if total > 0 {
                 session.epochs = total
             }
+
+        case .epochProgress(let epoch, let valLoss):
+            item.lossCurve.append(TrainingMetric(epoch: epoch, valLoss: valLoss))
 
         case .esrResult(let esr):
             item.validationESR = esr
