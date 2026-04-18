@@ -7,8 +7,135 @@
       "layers" : [
         {
           "fill" : {
+            "automatic-gradient" : "srgb:1.00000,0.17647,0.33333,1.00000"
+          },
+          "image-name" : "dot.svg",
+          "name" : "dot",
+          "position" : {
+            "scale" : 0.3,
+            "translation-in-points" : [
+              236.00101901680011,
+              -235.99950739039997
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "automatic-gradient" : "srgb:1.00000,0.17647,0.33333,1.00000"
+          },
+          "image-name" : "dot.svg",
+          "name" : "dot",
+          "position" : {
+            "scale" : 0.3,
+            "translation-in-points" : [
+              0.0008381879999888042,
+              -232.99950739040003
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "automatic-gradient" : "srgb:1.00000,0.17647,0.33333,1.00000"
+          },
+          "image-name" : "dot.svg",
+          "name" : "dot",
+          "position" : {
+            "scale" : 0.3,
+            "translation-in-points" : [
+              236.00101901680006,
+              9.925919988518217e-05
+            ]
+          }
+        },
+        {
+          "fill" : {
             "automatic-gradient" : "srgb:0.67451,0.49804,0.36863,1.00000"
           },
+          "image-name" : "dot.svg",
+          "name" : "dot",
+          "position" : {
+            "scale" : 0.3,
+            "translation-in-points" : [
+              236.00101901679994,
+              236.0007050832
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "automatic-gradient" : "srgb:0.67451,0.49804,0.36863,1.00000"
+          },
+          "image-name" : "dot.svg",
+          "name" : "dot",
+          "position" : {
+            "scale" : 0.3,
+            "translation-in-points" : [
+              0.0002127800001403557,
+              236.0007050832
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "automatic-gradient" : "srgb:0.00000,0.76471,0.81569,1.00000"
+          },
+          "image-name" : "dot.svg",
+          "name" : "dot",
+          "position" : {
+            "scale" : 0.3,
+            "translation-in-points" : [
+              -236.0005934568,
+              236.0007050832
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "automatic-gradient" : "srgb:0.67451,0.49804,0.36863,1.00000"
+          },
+          "image-name" : "dot.svg",
+          "name" : "dot",
+          "position" : {
+            "scale" : 0.3,
+            "translation-in-points" : [
+              -236.0005934568,
+              9.925919988518217e-05
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "automatic-gradient" : "srgb:0.67451,0.49804,0.36863,1.00000"
+          },
+          "image-name" : "dot.svg",
+          "name" : "dot",
+          "position" : {
+            "scale" : 0.3,
+            "translation-in-points" : [
+              -236.0005934568,
+              -235.99950739039997
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "automatic-gradient" : "srgb:0.67451,0.49804,0.36863,1.00000"
+          },
+          "image-name" : "dot.svg",
+          "name" : "dot",
+          "position" : {
+            "scale" : 0.3,
+            "translation-in-points" : [
+              0.0008381879999888042,
+              9.925919999886901e-05
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "automatic-gradient" : "srgb:0.67451,0.49804,0.36863,1.00000"
+          },
+          "hidden" : true,
           "image-name" : "Dots.svg",
           "name" : "Dots",
           "position" : {
